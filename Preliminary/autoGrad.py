@@ -47,7 +47,7 @@ print(a.grad)
 
 ############# Practice #############
 a = torch.randn(size=(3, 4), requires_grad=True)
-b = a * 2
+b = a * a
 while b.norm() < 1000:
     b *= 2
 if b.sum() > 0:
@@ -55,7 +55,7 @@ if b.sum() > 0:
 else:
     c = 100 * b
 
-c.sum().backward()
+c.sum().backward()  # 只能对标量进行梯度反传
 print(a.grad)
 
 x = torch.arange(0, 2*math.pi, 1e-3)
