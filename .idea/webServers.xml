@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="4e37d1ae-dd4b-47b8-b644-388af9626302" name="YingCai">
+        <fileTransfer rootFolder="/public/LY" accessType="SFTP" host="121.48.165.111" port="30032" sshConfigId="683059e5-6b30-422d-8e06-955b72b8a57a" sshConfig="root@121.48.165.111:30032 password">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" keepAliveTimeout="0" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>
