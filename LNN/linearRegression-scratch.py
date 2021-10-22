@@ -11,7 +11,7 @@ def data_generator(weight, bias, num_data):
 
 
 def linreg(X, w, b):
-    return torch.matmul(X, w)+b
+    return torch.matmul(X, w) + b
 
 
 def data_iter(batch_size, features, labels):
@@ -20,18 +20,18 @@ def data_iter(batch_size, features, labels):
     random.shuffle(indices)
 
     for i in range(0, num_examples, batch_size):
-        batch_indices = indices[i:min(i+batch_size-1, num_examples)]
+        batch_indices = indices[i:min(i + batch_size - 1, num_examples)]
         yield features[batch_indices, :], labels[batch_indices]
 
 
 def squared_loss(y_hat, y):
-    return (y_hat-y.reshape(y_hat.shape))**2/2
+    return (y_hat - y.reshape(y_hat.shape)) ** 2 / 2
 
 
 def sgd(params, lr, batch_size):
     with torch.no_grad():
         for param in params:
-            param -= lr*param.grad/batch_size  # 原地操作，执行后的结果仍然赋给全局变量param
+            param -= lr * param.grad / batch_size  # 原地操作，执行后的结果仍然赋给全局变量param
             param.grad.zero_()
 
 
@@ -48,7 +48,7 @@ d2l.plt.show()
 num_epochs = 5
 batch_size = 10
 lr = 0.03
-w = torch.zeros(true_w.shape, requires_grad=True)  #torch.normal(0, 0.01, true_w.shape, requires_grad=True)
+w = torch.zeros(true_w.shape, requires_grad=True)  # torch.normal(0, 0.01, true_w.shape, requires_grad=True)
 b = torch.zeros(1, requires_grad=True)
 
 for t in range(num_epochs):
@@ -60,5 +60,5 @@ for t in range(num_epochs):
         sgd([w, b], lr, batch_size)
     print(f"Loss = {loss:>3f}\n")
 
-print(f"w的估计误差：{true_w-w.reshape(true_w.shape)}")
-print(print(f"b的估计误差：{true_b-b}"))
+print(f"w的估计误差：{true_w - w.reshape(true_w.shape)}")
+print(print(f"b的估计误差：{true_b - b}"))
