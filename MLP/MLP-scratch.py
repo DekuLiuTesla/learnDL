@@ -14,8 +14,8 @@ torch.cuda.manual_seed(SEED)
 W1 = nn.Parameter(torch.normal(0, 0.01, size=(num_inputs, num_hidden), requires_grad=True))
 # W1 = nn.Parameter(torch.ones(size=(num_inputs, num_hidden), requires_grad=True))
 b1 = nn.Parameter(torch.zeros(num_hidden, requires_grad=True))
-W0 = nn.Parameter(torch.normal(0, 0.01, size=(num_hidden, num_hidden), requires_grad=True))
-# W2 = nn.Parameter(torch.ones(size=(num_hidden, num_outputs), requires_grad=True))
+# W0 = nn.Parameter(torch.normal(0, 0.01, size=(num_hidden, num_hidden), requires_grad=True))
+W0 = nn.Parameter(0.2*torch.ones(size=(num_hidden, num_hidden), requires_grad=True))
 b0 = nn.Parameter(torch.zeros(num_hidden, requires_grad=True))
 W2 = nn.Parameter(torch.normal(0, 0.01, size=(num_hidden, num_outputs), requires_grad=True))
 # W2 = nn.Parameter(torch.ones(size=(num_hidden, num_outputs), requires_grad=True))
@@ -34,6 +34,7 @@ def net(X):
     H = relu(X@W1 + b1)
     M = relu(H @ W0 + b0)
     return M @ W2 + b2
+    # return H @ W2 + b2
 
 
 """自定义函数测试"""
