@@ -21,9 +21,9 @@ net = nn.Sequential(
 
 def init_weights(m):
     if type(m) == nn.Linear:
-        # nn.init.normal_(m.weight, std=0.01)
+        nn.init.normal_(m.weight, std=0.01)
         # nn.init.eye_(m.weight)
-        nn.init.ones_(m.weight)
+        # nn.init.ones_(m.weight)
 
 
 net.apply(init_weights)
