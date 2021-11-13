@@ -35,6 +35,9 @@ def train(train_features, test_features, train_labels, test_labels, num_epochs=4
             animator.add(epoch + 1, (evaluate_loss(net, train_iter, loss),
                                      evaluate_loss(net, test_iter, loss)))
     print('weight:', net[0].weight.data.numpy())
+    d2l.plt.show()
+
+    return animator.Y[1][max_degree]
 
 
 ############# Data Generation #############
@@ -66,4 +69,38 @@ train(poly_features[:n_train, :4], poly_features[n_train:, :4],
 # train(poly_features[:n_train, :], poly_features[n_train:, :],
 #       labels[:n_train], labels[n_train:], num_epochs=1500)
 
-d2l.plt.show()
+"""作业题解答"""
+# 2.1 运行下面的代码绘制各阶多项式拟合的损失函数及损失与模型复杂度的关系图，
+# 可以看到至少需要三阶表达式才足以将训练误差减少为0
+# loss = np.zeros(max_degree)
+# for i in range(max_degree):
+#     loss[i] = train(poly_features[:n_train, :i + 1], poly_features[n_test:, :i + 1],
+#                     labels[:n_train], labels[n_test:])
+# x_Axis = np.arange(max_degree)
+# d2l.plt.figure()
+# d2l.plt.plot(x_Axis, loss)
+# ax = d2l.plt.gca()
+# x_major_locator = d2l.plt.MultipleLocator(1)
+# ax.xaxis.set_major_locator(x_major_locator)
+# # y_major_locator=d2l.plt.MultipleLocator(10)
+# # ax.yaxis.set_major_locator(y_major_locator)
+# d2l.plt.show()
+
+# 2.2 运行下面的代码绘制损失与数据量的关系图，可以看到随着数据量增加，过拟合现象得到显著改善
+# loss = np.zeros(10)
+# for i in range(10):
+#     num = 10*(i+1)
+#     loss[i] = train(poly_features[:num, :4], poly_features[n_train:, :4],
+#                     labels[:num], labels[n_train:])
+# x_Axis = np.arange(10, n_train + 1, 10)
+# d2l.plt.figure()
+# d2l.plt.plot(x_Axis, loss)
+# ax = d2l.plt.gca()
+# x_major_locator = d2l.plt.MultipleLocator(10)
+# ax.xaxis.set_major_locator(x_major_locator)
+# # y_major_locator=d2l.plt.MultipleLocator(10)
+# # ax.yaxis.set_major_locator(y_major_locator)
+# d2l.plt.show()
+
+# 3. 如果不进行标准化，会导致高阶项出现非常大的梯度，有可能导致训练过程不稳定、不收敛乃至出现梯度爆炸的现象；
+# 适度调小学习率有助于改善这一现象
