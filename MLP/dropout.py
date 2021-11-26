@@ -47,7 +47,7 @@ class Net(nn.Module):
         return out
 
 
-# net = Net(num_inputs, num_outputs, num_hiddens1, num_hiddens2)
+# net = Net(num_inputs, num_outputs, num_hiddens1, num_hiddens2)  # from scratch
 net = nn.Sequential(
     nn.Flatten(),
     nn.Linear(num_inputs, num_hiddens1),
