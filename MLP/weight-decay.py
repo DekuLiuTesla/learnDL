@@ -59,17 +59,17 @@ def train_concise(wd):
     loss = nn.MSELoss()
     optimizer = torch.optim.SGD([{"params": net[0].weight, "weight_decay": wd},  # 在优化器中提供权重衰减
                                  {"params": net[0].bias}], lr=lr)
-    # animator = d2l.Animator(xlabel='epoch', ylabel='loss', yscale='log',
-    #                         xlim=[5, num_epochs], legend=['train', 'test'])
+    animator = d2l.Animator(xlabel='epoch', ylabel='loss', yscale='log',
+                            xlim=[5, num_epochs], legend=['train', 'test'])
     for epoch in range(num_epochs):
         for X, y in train_iter:
             l = loss(net(X), y)
             optimizer.zero_grad()
             l.backward()
             optimizer.step()
-        # if (epoch + 1) % 5 == 0:
-        #     animator.add(epoch + 1, (d2l.evaluate_loss(net, train_iter, loss),
-        #                              d2l.evaluate_loss(net, test_iter, loss)))
+        if (epoch + 1) % 5 == 0:
+            animator.add(epoch + 1, (d2l.evaluate_loss(net, train_iter, loss),
+                                     d2l.evaluate_loss(net, test_iter, loss)))
     print('w的L2范数是：', net[0].weight.norm().item())
     # d2l.plt.show()
     return [d2l.evaluate_loss(net, train_iter, loss), d2l.evaluate_loss(net, test_iter, loss)]
