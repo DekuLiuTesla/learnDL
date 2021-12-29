@@ -96,3 +96,51 @@ nestMLP = nn.Sequential(
 )
 y_nestMLP = nestMLP(X)
 print(y_nestMLP)
+
+"""作业题解答"""
+# 1. 以Python列表存储将无法记录块的顺序，因而将无法正确按顺序调用块执行功能
+# 2. 代码实现如下：
+
+
+class ParallelMLP(nn.Module):
+    def __init__(self, net1, net2):
+        super(ParallelMLP, self).__init__()
+        self.net_1st = net1
+        self.net_2nd = net2
+
+    def forward(self, X):
+        y1 = self.net_1st(X).unsqueeze(-1)  # 网络前向传播增加一个维度
+        y2 = self.net_2nd(X).unsqueeze(-1)  # 网络前向传播增加一个维度
+        return torch.cat((y1, y2), dim=-1)  # 在最后一个维度进行拼接
+
+
+parallelNet = ParallelMLP(
+    NestMLP(),
+    NestMLP()
+)
+print(parallelNet(X))
+
+# 3. 代码实现如下：
+
+
+class RepeatedModule(nn.Module):
+    def __init__(self, module, n):
+        super(RepeatedModule, self).__init__()
+        for i in range(n):
+            self._modules[str(i)] = module
+
+    def forward(self, X):
+        # OrderedDict保证了按照成员添加的顺序遍历它们
+        for block in self._modules.values():
+            X = block(X)
+        return X
+
+
+net = nn.Sequential(
+    nn.Linear(20, 256),
+    nn.ReLU(),
+    nn.Linear(256, 20)
+)
+
+repeatedModule = RepeatedModule(net, 5)
+print(repeatedModule(X))
