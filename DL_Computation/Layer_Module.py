@@ -123,11 +123,26 @@ print(parallelNet(X))
 # 3. 代码实现如下：
 
 
+class TestMLP(nn.Module):
+    def __init__(self):
+        super(TestMLP, self).__init__()
+        self.net = nn.Sequential(
+            nn.Linear(20, 64),
+            nn.ReLU(),
+            nn.Linear(64, 32),
+            nn.ReLU()
+        )
+        self.linear = nn.Linear(32, 20)
+
+    def forward(self, X):
+        return self.linear(self.net(X))
+
+
 class RepeatedModule(nn.Module):
-    def __init__(self, module, n):
+    def __init__(self, module_class, n):
         super(RepeatedModule, self).__init__()
         for i in range(n):
-            self._modules[str(i)] = module
+            self._modules[str(i)] = module_class()
 
     def forward(self, X):
         # OrderedDict保证了按照成员添加的顺序遍历它们
@@ -136,11 +151,7 @@ class RepeatedModule(nn.Module):
         return X
 
 
-net = nn.Sequential(
-    nn.Linear(20, 256),
-    nn.ReLU(),
-    nn.Linear(256, 20)
-)
-
-repeatedModule = RepeatedModule(net, 5)
+repeatedModule = RepeatedModule(TestMLP, 5)
 print(repeatedModule(X))
+# print(repeatedModule._modules['0'].state_dict())
+# print(repeatedModule._modules['2'].state_dict())

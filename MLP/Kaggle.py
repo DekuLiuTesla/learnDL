@@ -17,6 +17,16 @@ DATA_HUB = dict()  # 数据集-下载地址映射二元组
 DATA_URL = 'http://d2l-data.s3-accelerate.amazonaws.com/'
 
 
+class Flock(nn.Module):
+    def __init__(self):
+        super(Flock, self).__init__()
+        self.relu = nn.ReLU()
+
+    def forward(self, x):
+        x_fft = x.fft()
+
+
+
 def download(name, cache_dir=os.path.join('..', 'data')):  # @save
     """下载一个DATA_HUB中的文件，返回本地文件名"""
     # 判断是否是DATA_HUB中有的数据集
