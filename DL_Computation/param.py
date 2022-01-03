@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from Layer_Module import NestMLP
+from layerModule import NestMLP
 
 
 def block1():
