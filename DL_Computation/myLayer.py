@@ -60,6 +60,7 @@ class DimensionReduction(nn.Module):
     def forward(self, X, Y):
         # 先用X和Y做矩阵乘法构成i*j矩阵，
         # 再用卷积层快捷地实现计算功能
+        # transpose: out(..., m, ..., n, ...) = in(..., n, ..., m, ...)
         matrix = torch.bmm(x, torch.transpose(y, 1, 2))
         matrix = matrix.unsqueeze(1)  # B*1*i*j
         return self.net(matrix)  # B*5*i*j
