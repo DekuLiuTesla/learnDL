@@ -18,13 +18,49 @@ DATA_URL = 'http://d2l-data.s3-accelerate.amazonaws.com/'
 
 
 class Flock(nn.Module):
-    def __init__(self):
+    def __init__(self, num_inputs, num_hidden_f=256, num_hidden=512, dropout=0.2):
         super(Flock, self).__init__()
-        self.relu = nn.ReLU()
+        self.num_inputs = num_inputs
+        self.mask = nn.Parameter(torch.randn(1, num_inputs*2))
+        self.net_f = nn.Sequential(
+            nn.Linear(num_inputs*2, num_hidden_f),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(num_hidden_f, num_hidden_f),
+            nn.ReLU(),
+            nn.Dropout(dropout),
+            nn.Linear(num_hidden_f, num_inputs*2)
+        )
+        self.net = nn.Sequential(
+            nn.Linear(num_inputs*2, num_hidden),
+            nn.ReLU(),
+            nn.Linear(num_hidden, 1)
+        )
 
     def forward(self, x):
-        x_fft = x.fft()
+        x_fft = torch.fft.fft(x)
+        x_fft_amplitude = x_fft.abs()
+        x_fft_phase = torch.atan(x_fft.imag/x_fft.real)
 
+        # 分开幅度和相位，分别用两个MLP处理，对应的激活函数分别为ReLU和tanh
+        # 用self-attention的机制交流两部分的信息
+        # 通道内部或许可以拆成多个小向量然后使用自注意力，用来取代1*1卷积，得到更好的融合效果
+        #  --------                 -----------
+        #           \ / \ / \ / \ /
+        #            -------------             ........
+        #           / \ / \ / \ / \
+        #  --------                 -----------
+        x_f = torch.cat((x_fft_real, x_fft_imag), -1)
+        x_f = self.net_f(x_f)
+        # x_f.mul(self.mask)
+        x_fft = torch.complex(x_f[:, :self.num_inputs], x_f[:, self.num_inputs:])
+        # 输出以后的复数可以像频域一样分开实部虚部然后cat在一起，然后用来输出结果
+        x_hat = torch.fft.ifft(x_fft)
+        x_hat_real = x_hat.real
+        x_hat_imag = x_hat.imag
+        x_h = torch.cat((x_hat_real, x_hat_imag), -1)
+        output = self.net(x_h)
+        return output
 
 
 def download(name, cache_dir=os.path.join('..', 'data')):  # @save
@@ -102,12 +138,13 @@ def get_net():
     num_inputs = training_features.shape[1]
     num_hidden = 1024
     dropout_rate = 0.5
-    net = nn.Sequential(
-        nn.Linear(num_inputs, num_hidden),
-        nn.ReLU(),
-        nn.Dropout(dropout_rate),
-        nn.Linear(num_hidden, 1)
-    )
+    net = Flock(num_inputs, dropout=0.2)
+    # net = nn.Sequential(
+    #     nn.Linear(num_inputs, num_hidden),
+    #     nn.ReLU(),
+    #     nn.Dropout(dropout_rate),
+    #     nn.Linear(num_hidden, 1)
+    # )
 
     return net
 
@@ -263,19 +300,19 @@ train_labels = torch.tensor(training_data.iloc[:, -1], dtype=torch.float32).resh
 
 """超参数设置"""
 batch_size = 256
-base_lr = 0.1
+base_lr = 0.005
 weight_decay = 0.0001
 num_epochs = 30
 k = 5
 
 """K折验证"""
-# train_l, valid_l = k_fold(k, training_features, train_labels,
-#                           num_epochs, base_lr, weight_decay, batch_size)
-# print(f"{k}折验证,平均训练log rmse:{float(train_l):f}, 验证log rmse:{float(valid_l):f}")
+train_l, valid_l = k_fold(k, training_features, train_labels,
+                          num_epochs, base_lr, weight_decay, batch_size)
+print(f"{k}折验证,平均训练log rmse:{float(train_l):f}, 验证log rmse:{float(valid_l):f}")
 
 """训练与预测结果保存"""
-train_and_predict(training_features, train_labels, test_features, test_data,
-                      num_epochs, base_lr, weight_decay, batch_size)
+# train_and_predict(training_features, train_labels, test_features, test_data,
+#                       num_epochs, base_lr, weight_decay, batch_size)
 
 """作业题解答"""
 # 1. 提交后得到的分数为rmse = 0.18566
