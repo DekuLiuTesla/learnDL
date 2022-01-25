@@ -3,6 +3,7 @@ import os
 import tarfile
 import zipfile
 
+import fnet_modules
 import pandas
 import requests
 import pandas as pd
@@ -15,52 +16,6 @@ from d2l import torch as d2l
 # @save
 DATA_HUB = dict()  # 数据集-下载地址映射二元组
 DATA_URL = 'http://d2l-data.s3-accelerate.amazonaws.com/'
-
-
-class Flock(nn.Module):
-    def __init__(self, num_inputs, num_hidden_f=256, num_hidden=512, dropout=0.2):
-        super(Flock, self).__init__()
-        self.num_inputs = num_inputs
-        self.mask = nn.Parameter(torch.randn(1, num_inputs*2))
-        self.net_f = nn.Sequential(
-            nn.Linear(num_inputs*2, num_hidden_f),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(num_hidden_f, num_hidden_f),
-            nn.ReLU(),
-            nn.Dropout(dropout),
-            nn.Linear(num_hidden_f, num_inputs*2)
-        )
-        self.net = nn.Sequential(
-            nn.Linear(num_inputs*2, num_hidden),
-            nn.ReLU(),
-            nn.Linear(num_hidden, 1)
-        )
-
-    def forward(self, x):
-        x_fft = torch.fft.fft(x)
-        x_fft_amplitude = x_fft.abs()
-        x_fft_phase = torch.atan(x_fft.imag/x_fft.real)
-
-        # 分开幅度和相位，分别用两个MLP处理，对应的激活函数分别为ReLU和tanh
-        # 用self-attention的机制交流两部分的信息
-        # 通道内部或许可以拆成多个小向量然后使用自注意力，用来取代1*1卷积，得到更好的融合效果
-        #  --------                 -----------
-        #           \ / \ / \ / \ /
-        #            -------------             ........
-        #           / \ / \ / \ / \
-        #  --------                 -----------
-        x_f = torch.cat((x_fft_real, x_fft_imag), -1)
-        x_f = self.net_f(x_f)
-        # x_f.mul(self.mask)
-        x_fft = torch.complex(x_f[:, :self.num_inputs], x_f[:, self.num_inputs:])
-        # 输出以后的复数可以像频域一样分开实部虚部然后cat在一起，然后用来输出结果
-        x_hat = torch.fft.ifft(x_fft)
-        x_hat_real = x_hat.real
-        x_hat_imag = x_hat.imag
-        x_h = torch.cat((x_hat_real, x_hat_imag), -1)
-        output = self.net(x_h)
-        return output
 
 
 def download(name, cache_dir=os.path.join('..', 'data')):  # @save
@@ -138,7 +93,7 @@ def get_net():
     num_inputs = training_features.shape[1]
     num_hidden = 1024
     dropout_rate = 0.5
-    net = Flock(num_inputs, dropout=0.2)
+    net = fnet_modules.FLock(num_inputs, 1)
     # net = nn.Sequential(
     #     nn.Linear(num_inputs, num_hidden),
     #     nn.ReLU(),
@@ -175,7 +130,7 @@ def init_weights(m):
 def train(net, train_features, train_labels, test_features, test_labels,
           num_epochs, learning_rate, weight_decay, batch_size):
     train_ls, test_ls = [], []
-
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     train_iter = d2l.load_array((train_features, train_labels), batch_size)
     # 使用Adam算法进行优化
     optimizer = torch.optim.Adam(net.parameters(), lr=learning_rate, weight_decay=weight_decay)
@@ -302,7 +257,7 @@ train_labels = torch.tensor(training_data.iloc[:, -1], dtype=torch.float32).resh
 batch_size = 256
 base_lr = 0.005
 weight_decay = 0.0001
-num_epochs = 30
+num_epochs = 50
 k = 5
 
 """K折验证"""
@@ -312,7 +267,7 @@ print(f"{k}折验证,平均训练log rmse:{float(train_l):f}, 验证log rmse:{fl
 
 """训练与预测结果保存"""
 # train_and_predict(training_features, train_labels, test_features, test_data,
-#                       num_epochs, base_lr, weight_decay, batch_size)
+#                   num_epochs, base_lr, weight_decay, batch_size)
 
 """作业题解答"""
 # 1. 提交后得到的分数为rmse = 0.18566
@@ -327,4 +282,3 @@ print(f"{k}折验证,平均训练log rmse:{float(train_l):f}, 验证log rmse:{fl
 # 6. 那么不同特征的数据尺度会有巨大差异，举个简单的例子，z=ax+by，如果x比y的大几个数量级，那么显然预测结果会被x主导，而可能
 # 同样十分重要的特征y几乎无法影响预测值；此外dz/da=x, dz/db=y，也可以看出a可以有效更新，但b的更新幅度则小的多，反过来又进一步
 # 扩大了x的影响，因此不做标准化会直接导致结果被几个数量级大的特征主导，但这些特征的相关性可能并没有数量级小的特征好，从而劣化预测性能
-
