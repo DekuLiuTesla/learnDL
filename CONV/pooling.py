@@ -53,4 +53,3 @@ print(pool2d(X, (2, 2), 'avg'))
 
 # 6. 有，但MaxPooling和AveragePooling在前向和反向传播过程都更加有利于计算，能够以较小的算力达到降维的目的
 
-# 6.
