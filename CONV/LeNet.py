@@ -119,18 +119,19 @@ d2l.plt.show()
 #      为128，能够更好地缓解过拟合现象，同时不损失精度
 
 # 4. 参考以下的代码
-for X, y in test_iter:
-    X = X.to(device)
-    y = y.to(device)
-    for i, layer in enumerate(LeNet):
-        X = layer(X)
-        if isinstance(layer, nn.ReLU):
-            idx = 0
-            print('Label: ', d2l.get_fashion_mnist_labels([y[idx]]))
-            print(f'[{i}]', layer.__class__.__name__, ': \n', X[idx])
-            idx = 1
-            print('Label: ', d2l.get_fashion_mnist_labels([y[idx]]))
-            print(f'[{i}]', layer.__class__.__name__, ': \n', X[idx])
-    break
+with torch.no_grad():
+    for X, y in test_iter:
+        X = X.to(device)
+        y = y.to(device)
+        for i, layer in enumerate(LeNet):
+            X = layer(X)
+            if isinstance(layer, nn.ReLU):
+                layer = 1
+                s = X[:2, layer, :, :].to('cpu')
+                titles = d2l.get_fashion_mnist_labels(y[:2])
+                d2l.show_images(
+                    d2l.reshape(s, (2, s.shape[1], s.shape[2])), 1, 2, titles=titles)
+                d2l.plt.show()
+        break
 
 
