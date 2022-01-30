@@ -74,6 +74,7 @@ print(f'Time on CPU: {end-start:5f} s')
 # 3. 参看如下代码。可以看到涉及数据在设备间的转移时，多次小操作确实比一次大操作更慢
 # 全局解释器锁使得多进程在多核的情况下也只能一个一个进行，这就导致小操作情况下每次都必须等待数据传输的进程
 # 结束之后才能继续运算，加上数据传输本身较慢，就降低了算法总体的并行度和速度
+'''
 start = time.perf_counter()
 for i in range(1000):
     A = torch.randn(100, 100, device=try_gpu())
@@ -93,3 +94,4 @@ record.to(device='cpu')
 print(record)
 end = time.perf_counter()
 print(f'Total time: {end-start:5f} s')
+'''

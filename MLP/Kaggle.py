@@ -130,7 +130,6 @@ def init_weights(m):
 def train(net, train_features, train_labels, test_features, test_labels,
           num_epochs, learning_rate, weight_decay, batch_size):
     train_ls, test_ls = [], []
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     train_iter = d2l.load_array((train_features, train_labels), batch_size)
     # 使用Adam算法进行优化
     optimizer = torch.optim.Adam(net.parameters(), lr=learning_rate, weight_decay=weight_decay)
@@ -142,9 +141,9 @@ def train(net, train_features, train_labels, test_features, test_labels,
             # l = loss(net(X), torch.log(y))  # 直接预测价格的对数
             l.backward()
             optimizer.step()
-        train_ls.append(log_rmse(net, train_features, train_labels).detach().numpy())
+        train_ls.append(log_rmse(net, train_features, train_labels).detach().cpu().numpy())
         if test_labels is not None:
-            test_ls.append(log_rmse(net, test_features, test_labels).detach().numpy())
+            test_ls.append(log_rmse(net, test_features, test_labels).detach().cpu().numpy())
 
     return train_ls, test_ls
 
@@ -164,9 +163,13 @@ def get_k_fold_data(k, i, X, y):
 
 def k_fold(k, train_features, train_labels, num_epochs,
            learning_rate, weight_decay, batch_size):
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    train_features = train_features.to(device)
+    train_labels = train_labels.to(device)
+
     train_ls_sum, valid_ls_sum = 0, 0
     for i in range(k):
-        net = get_net()
+        net = get_net().to(device)
         # net.apply(init_weights)
         X_train, y_train, X_valid, y_valid = get_k_fold_data(k, i, train_features, train_labels)
         train_ls, valid_ls = train(net, X_train, y_train, X_valid, y_valid,
@@ -255,9 +258,9 @@ train_labels = torch.tensor(training_data.iloc[:, -1], dtype=torch.float32).resh
 
 """超参数设置"""
 batch_size = 256
-base_lr = 0.005
-weight_decay = 0.0001
-num_epochs = 50
+base_lr = 0.002
+weight_decay = 0.005
+num_epochs = 60
 k = 5
 
 """K折验证"""

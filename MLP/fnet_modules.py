@@ -54,6 +54,16 @@ class PhaseMLP(nn.Module):
 
 
 class ComplexMLP(nn.Module):
+    """MLP computed on complex inputs.
+
+            Args:
+                num_inputs (int): Input channel.
+                num_outputs (int): Output channel.
+                num_hidden (int): Channel of hidden layers.
+                dropout_rate (float): Dropout rate applied in dropout layer.
+
+    """  # noqa: W605
+
     def __init__(self, num_inputs, num_outputs, num_hidden=64, dropout_rate=0.2):
         super(ComplexMLP, self).__init__()
         self.CMLP = nn.Sequential(
@@ -87,22 +97,37 @@ class FLock(nn.Module):
     # num_hidden三个维度分别对应amplitudeMLP, phaseMLP, complexMLP的num_hidden
     def __init__(self, num_inputs, num_outputs, num_hidden=[16, 16, 16]):
         super(FLock, self).__init__()
+        self.num_inputs = num_inputs
+        self.num_hidden = num_hidden
         self.amplitudeMLP = AmplitudeMLP(num_inputs, num_hidden[0])
         self.phaseMLP = PhaseMLP(num_inputs, num_hidden[1])
         self.apAttention = AP_Attention()
         self.paAttention = AP_Attention()
         self.complexMLP = ComplexMLP(num_inputs, num_outputs, num_hidden[2])
+        self.CMLP = nn.Sequential(
+            nn.Linear(num_inputs*2, num_hidden[2]*4),
+            nn.ReLU(),
+            nn.Linear(num_hidden[2]*4, num_hidden[2]*4),
+            nn.ReLU(),
+            nn.Linear(num_hidden[2]*4, num_inputs*2)
+        )
 
     def forward(self, x):
         x_fft = torch.fft.fft(x)
         x_fft_amplitude = x_fft.abs()
         x_fft_phase = torch.atan(x_fft.imag / x_fft.real)
 
-        x_fft_amplitude = torch.unsqueeze(self.amplitudeMLP(x_fft_amplitude), -1)
-        x_fft_phase = torch.unsqueeze(self.phaseMLP(x_fft_phase), -1)
+        # x_fft_amplitude = torch.unsqueeze(self.amplitudeMLP(x_fft_amplitude), -1)
+        # x_fft_phase = torch.unsqueeze(self.phaseMLP(x_fft_phase), -1)
+        x_fft_amplitude = self.amplitudeMLP(x_fft_amplitude)
+        x_fft_phase = self.phaseMLP(x_fft_phase)
 
-        xa_fft_amplitude = torch.squeeze(self.apAttention(x_fft_amplitude, x_fft_phase), -1)
-        xa_fft_phase = torch.squeeze(self.paAttention(x_fft_phase, x_fft_amplitude), -1)
+        # xa_fft_amplitude = torch.squeeze(self.apAttention(x_fft_amplitude, x_fft_phase), -1)
+        # xa_fft_phase = torch.squeeze(self.paAttention(x_fft_phase, x_fft_amplitude), -1)
+
+        xa_fft = self.CMLP(torch.cat((x_fft_amplitude, x_fft_phase), -1))
+        xa_fft_amplitude = xa_fft[:, :self.num_inputs]
+        xa_fft_phase = xa_fft[:, self.num_inputs:]
 
         x_fft_real = xa_fft_amplitude * torch.cos(xa_fft_phase)
         x_fft_img = xa_fft_amplitude * torch.sin(xa_fft_phase)
