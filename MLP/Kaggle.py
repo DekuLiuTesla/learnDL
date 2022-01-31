@@ -93,13 +93,13 @@ def get_net():
     num_inputs = training_features.shape[1]
     num_hidden = 1024
     dropout_rate = 0.5
-    net = fnet_modules.FLock(num_inputs, 1)
-    # net = nn.Sequential(
-    #     nn.Linear(num_inputs, num_hidden),
-    #     nn.ReLU(),
-    #     nn.Dropout(dropout_rate),
-    #     nn.Linear(num_hidden, 1)
-    # )
+    # net = fnet_modules.FLock(num_inputs, 1)
+    net = nn.Sequential(
+        nn.Linear(num_inputs, num_hidden),
+        nn.ReLU(),
+        nn.Dropout(dropout_rate),
+        nn.Linear(num_hidden, 1)
+    )
 
     return net
 
@@ -258,9 +258,9 @@ train_labels = torch.tensor(training_data.iloc[:, -1], dtype=torch.float32).resh
 
 """超参数设置"""
 batch_size = 256
-base_lr = 0.002
+base_lr = 0.1
 weight_decay = 0.005
-num_epochs = 60
+num_epochs = 30
 k = 5
 
 """K折验证"""

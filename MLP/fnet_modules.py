@@ -6,7 +6,7 @@ from torch import nn
 
 
 class AmplitudeMLP(nn.Module):
-    def __init__(self, num_inputs, num_hidden, dropout_rate=0.2):
+    def __init__(self, num_inputs, num_hidden, dropout_rate=0.25):
         super(AmplitudeMLP, self).__init__()
         self.AMLP = nn.Sequential(
             nn.Linear(num_inputs, num_hidden),
@@ -23,7 +23,7 @@ class AmplitudeMLP(nn.Module):
 
 
 class PhaseMLP(nn.Module):
-    def __init__(self, num_inputs, num_hidden, dropout_rate=0.2, range_type=None):
+    def __init__(self, num_inputs, num_hidden, dropout_rate=0.25, range_type=None):
         super(PhaseMLP, self).__init__()
         # 控制相位范围的几种可能方法：
         # 1. tanh*pi
@@ -64,7 +64,7 @@ class ComplexMLP(nn.Module):
 
     """  # noqa: W605
 
-    def __init__(self, num_inputs, num_outputs, num_hidden=64, dropout_rate=0.2):
+    def __init__(self, num_inputs, num_outputs, num_hidden=64, dropout_rate=0.25):
         super(ComplexMLP, self).__init__()
         self.CMLP = nn.Sequential(
             nn.Linear(num_inputs*2, num_hidden),
@@ -95,7 +95,7 @@ class AP_Attention(nn.Module):
 
 class FLock(nn.Module):
     # num_hidden三个维度分别对应amplitudeMLP, phaseMLP, complexMLP的num_hidden
-    def __init__(self, num_inputs, num_outputs, num_hidden=[16, 16, 16]):
+    def __init__(self, num_inputs, num_outputs, num_hidden=[64, 64, 64]):
         super(FLock, self).__init__()
         self.num_inputs = num_inputs
         self.num_hidden = num_hidden
@@ -104,35 +104,51 @@ class FLock(nn.Module):
         self.apAttention = AP_Attention()
         self.paAttention = AP_Attention()
         self.complexMLP = ComplexMLP(num_inputs, num_outputs, num_hidden[2])
-        self.CMLP = nn.Sequential(
-            nn.Linear(num_inputs*2, num_hidden[2]*4),
-            nn.ReLU(),
-            nn.Linear(num_hidden[2]*4, num_hidden[2]*4),
-            nn.ReLU(),
-            nn.Linear(num_hidden[2]*4, num_inputs*2)
-        )
 
     def forward(self, x):
         x_fft = torch.fft.fft(x)
         x_fft_amplitude = x_fft.abs()
         x_fft_phase = torch.atan(x_fft.imag / x_fft.real)
 
-        # x_fft_amplitude = torch.unsqueeze(self.amplitudeMLP(x_fft_amplitude), -1)
-        # x_fft_phase = torch.unsqueeze(self.phaseMLP(x_fft_phase), -1)
-        x_fft_amplitude = self.amplitudeMLP(x_fft_amplitude)
-        x_fft_phase = self.phaseMLP(x_fft_phase)
+        x_fft_amplitude = torch.unsqueeze(self.amplitudeMLP(x_fft_amplitude), -1)
+        x_fft_phase = torch.unsqueeze(self.phaseMLP(x_fft_phase), -1)
 
-        # xa_fft_amplitude = torch.squeeze(self.apAttention(x_fft_amplitude, x_fft_phase), -1)
-        # xa_fft_phase = torch.squeeze(self.paAttention(x_fft_phase, x_fft_amplitude), -1)
-
-        xa_fft = self.CMLP(torch.cat((x_fft_amplitude, x_fft_phase), -1))
-        xa_fft_amplitude = xa_fft[:, :self.num_inputs]
-        xa_fft_phase = xa_fft[:, self.num_inputs:]
+        xa_fft_amplitude = torch.squeeze(self.apAttention(x_fft_amplitude, x_fft_phase), -1)
+        xa_fft_phase = torch.squeeze(self.paAttention(x_fft_phase, x_fft_amplitude), -1)
 
         x_fft_real = xa_fft_amplitude * torch.cos(xa_fft_phase)
         x_fft_img = xa_fft_amplitude * torch.sin(xa_fft_phase)
 
         x_fft = torch.complex(x_fft_real, x_fft_img)
+        x_h = torch.fft.ifft(x_fft)
+
+        return self.complexMLP(x_h)
+
+
+class FLock_IQ(nn.Module):
+    # num_hidden三个维度分别对应amplitudeMLP, phaseMLP, complexMLP的num_hidden
+    def __init__(self, num_inputs, num_outputs, num_hidden=[64, 64, 64]):
+        super(FLock_IQ, self).__init__()
+        self.num_inputs = num_inputs
+        self.num_hidden = num_hidden
+        self.realMLP = AmplitudeMLP(num_inputs, num_hidden[0])
+        self.imagMLP = PhaseMLP(num_inputs, num_hidden[1])
+        self.iqAttention = AP_Attention()
+        self.qiAttention = AP_Attention()
+        self.complexMLP = ComplexMLP(num_inputs, num_outputs, num_hidden[2])
+
+    def forward(self, x):
+        x_fft = torch.fft.fft(x)
+        x_fft_real = x_fft.real
+        x_fft_imag = x_fft.imag
+
+        x_fft_real = torch.unsqueeze(self.realMLP(x_fft_real), -1)
+        x_fft_imag = torch.unsqueeze(self.imagMLP(x_fft_imag), -1)
+
+        xa_fft_real = torch.squeeze(self.qiAttention(x_fft_real, x_fft_imag), -1)
+        xa_fft_imag = torch.squeeze(self.iqAttention(x_fft_imag, x_fft_real), -1)
+
+        x_fft = torch.complex(xa_fft_real, xa_fft_imag)
         x_h = torch.fft.ifft(x_fft)
 
         return self.complexMLP(x_h)
