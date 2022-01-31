@@ -53,11 +53,11 @@ ratio = 8
 small_conv_arch = ((pair[0], pair[1]//ratio) for pair in conv_arch)
 VGGs = vgg(small_conv_arch)
 
-# ratio=8, test acc 0.912
-# lr, num_epochs, batch_size = 0.05, 10, 128
-# train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size, resize=size)
-# d2l.train_ch6(VGGs, train_iter, test_iter, num_epochs, lr, device)
-# d2l.plt.show()
+# ratio=8, # test acc = 0.912
+lr, num_epochs, batch_size = 0.05, 10, 128
+train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size, resize=size)
+d2l.train_ch6(VGGs, train_iter, test_iter, num_epochs, lr, device)
+d2l.plt.show()
 
 
 """作业题解答"""
