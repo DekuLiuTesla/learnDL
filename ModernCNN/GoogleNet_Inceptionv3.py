@@ -202,5 +202,5 @@ summary(GoogleNet, input_size=(1, 96, 96))
 # 按教材配置，得到test acc=0.847
 lr, num_epochs, batch_size = 0.1, 10, 128
 train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size, resize=96)
-train_ch7(GoogleNet, train_iter, test_iter, num_epochs, lr, d2l.try_gpu())
+d2l.train_ch6(GoogleNet, train_iter, test_iter, num_epochs, lr, d2l.try_gpu())
 d2l.plt.show()

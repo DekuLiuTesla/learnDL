@@ -95,7 +95,7 @@ class FLock(nn.Module):
 
     def forward(self, x):
         x_fft = torch.fft.fft(x)
-        x_fft_in = torch.cat((x_fft.real, x_fft.imag), 1)
+        x_fft_in = torch.cat((x, x_fft.real, x_fft.imag), 1)
 
         x_fft_out = self.complexMLP(x_fft_in)
 
