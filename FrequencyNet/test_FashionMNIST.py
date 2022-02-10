@@ -41,8 +41,47 @@ class Residual(nn.Module):
 
         if self.conv3:
             X = self.conv3(X)
-            X = self.gfilter(X)
+            X = self.gfilter(X)  # 先提取全局信息，再降采样
         Y += X
+
+        return F.relu(Y)
+
+
+class Residual_cat(nn.Module):
+    def __init__(self, input_channels, num_channels, use_1x1conv=False, strides=1, h=0, w=0):
+        super(Residual_cat, self).__init__()
+        if use_1x1conv:
+            assert h > 0 and w > 0
+            space_channels = num_channels // 2
+            freq_channels = num_channels - space_channels
+            self.conv1 = nn.Conv2d(input_channels, space_channels,
+                                   kernel_size=3, padding=1, stride=strides)
+            self.conv2 = nn.Conv2d(space_channels, space_channels,
+                                   kernel_size=3, padding=1)
+            self.conv3 = nn.Conv2d(input_channels, freq_channels,
+                                   kernel_size=2, stride=strides)
+            self.gfilter = GlobalFilter(freq_channels, h, w)
+            self.bn1 = nn.BatchNorm2d(space_channels)
+            self.bn2 = nn.BatchNorm2d(space_channels)
+        else:
+            self.conv1 = nn.Conv2d(input_channels, num_channels,
+                                   kernel_size=3, padding=1, stride=strides)
+            self.conv2 = nn.Conv2d(num_channels, num_channels,
+                                   kernel_size=3, padding=1)
+            self.conv3 = None
+            self.bn1 = nn.BatchNorm2d(num_channels)
+            self.bn2 = nn.BatchNorm2d(num_channels)
+
+    def forward(self, X):
+        Y = F.relu(self.bn1(self.conv1(X)))
+        Y = self.bn2(self.conv2(Y))
+
+        if self.conv3:
+            X = self.conv3(X)
+            X = self.gfilter(X)
+            Y = torch.cat((Y, X), 1)
+        else:
+            Y += X
 
         return F.relu(Y)
 
@@ -80,7 +119,13 @@ train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size, resize=96)
 d2l.train_ch6(ResNet18, train_iter, test_iter, num_epochs, lr, d2l.try_gpu())
 d2l.plt.show()
 
-
+# spatial Residual: loss 0.010, train acc 0.998, test acc 0.921
+# 20 epochs: loss 0.000, train acc 1.000, test acc 0.926
 # no Residual in Frequency Domain: loss 0.028, train acc 0.991, test acc 0.911
 # with Residual in Frequency Domain: loss 0.014, train acc 0.996, test acc 0.919
-
+# cat spatial and freq:
+# 10 epochs, batch_size = 256: loss 0.024, train acc 0.993, test acc 0.918
+# 10 epochs, batch_size = 128: loss 0.028, train acc 0.991, test acc 0.921
+# 20 epochs: loss 0.000, train acc 1.000, test acc 0.932
+# cat spatial and freq with 2x2 downsample
+# 10 epochs: loss 0.013, train acc 0.997, test acc 0.924:
