@@ -1,51 +1,86 @@
 import torch
 from torch import nn
+from torch.nn import functional as F
 from d2l import torch as d2l
 
 
-class freqAlexNet(nn.Module):
-    def __init__(self, in_net):
-        super(freqAlexNet, self).__init__()
-        self.net = in_net
+class GlobalFilter(nn.Module):
+    def __init__(self, dim, h=14, w=8):
+        super().__init__()
+        self.complex_weight = nn.Parameter(torch.randn(dim, h, w, 2, dtype=torch.float32) * 0.02)
 
     def forward(self, x):
-        x_fft = torch.fft.fft2(x)
-        x_in = torch.cat((x, x_fft.real, x_fft.imag), 1)
-        return self.net(x_in)
+        B, C, H, W = x.shape
+        x = torch.fft.rfft2(x, norm='ortho')
+        weight = torch.view_as_complex(self.complex_weight)
+        x = x + x * weight
+        x = torch.fft.irfft2(x, s=(H, W), norm='ortho')
+        return x
 
 
-AlexNet = nn.Sequential(
-    # 这里，我们使用一个11*11的更大窗口来捕捉对象。
-    # 同时，步幅为4，以减少输出的高度和宽度。
-    # 另外，输出通道的数目远大于LeNet
-    nn.Conv2d(3, 96, kernel_size=11, stride=4, padding=1), nn.BatchNorm2d(96), nn.ReLU(),
-    nn.MaxPool2d(kernel_size=3, stride=2),
-    # 减小卷积窗口，使用填充为2来使得输入与输出的高和宽一致，且增大输出通道数
-    nn.Conv2d(96, 256, kernel_size=5, padding=2), nn.BatchNorm2d(256), nn.ReLU(),
-    nn.MaxPool2d(kernel_size=3, stride=2),
-    # 使用三个连续的卷积层和较小的卷积窗口。
-    # 除了最后的卷积层，输出通道的数量进一步增加。
-    # 在前两个卷积层之后，汇聚层不用于减少输入的高度和宽度
-    nn.Conv2d(256, 384, kernel_size=3, padding=1), nn.BatchNorm2d(384), nn.ReLU(),
-    nn.Conv2d(384, 384, kernel_size=3, padding=1), nn.BatchNorm2d(384), nn.ReLU(),
-    nn.Conv2d(384, 256, kernel_size=3, padding=1), nn.BatchNorm2d(256), nn.ReLU(),
-    nn.MaxPool2d(kernel_size=3, stride=2),
-    nn.Flatten(),
-    # 这里，全连接层的输出数量是LeNet中的好几倍。使用dropout层来减轻过拟合
-    nn.Linear(6400, 4096), nn.BatchNorm1d(4096), nn.ReLU(),
-    nn.Dropout(p=0.5),
-    nn.Linear(4096, 4096), nn.BatchNorm1d(4096), nn.ReLU(),
-    nn.Dropout(p=0.5),
-    # 最后是输出层。由于这里使用Fashion-MNIST，所以用类别数为10，而非论文中的1000
-    nn.Linear(4096, 10))
+class Residual(nn.Module):
+    def __init__(self, input_channels, num_channels, use_1x1conv=False, strides=1, h=0, w=0):
+        super(Residual, self).__init__()
+        self.conv1 = nn.Conv2d(input_channels, num_channels,
+                               kernel_size=3, padding=1, stride=strides)
+        self.conv2 = nn.Conv2d(num_channels, num_channels,
+                               kernel_size=3, padding=1)
+        if use_1x1conv:
+            assert h > 0 and w > 0
+            self.conv3 = nn.Conv2d(input_channels, num_channels,
+                                   kernel_size=1, stride=strides)
+            self.gfilter = GlobalFilter(num_channels, h, w)
+        else:
+            self.conv3 = None
+        self.bn1 = nn.BatchNorm2d(num_channels)
+        self.bn2 = nn.BatchNorm2d(num_channels)
+
+    def forward(self, X):
+        Y = F.relu(self.bn1(self.conv1(X)))
+        Y = self.bn2(self.conv2(Y))
+
+        if self.conv3:
+            X = self.conv3(X)
+            X = self.gfilter(X)
+        Y += X
+
+        return F.relu(Y)
 
 
-batch_size = 128
-train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size, resize=224)
+def resnet_block(input_channels, num_channels, num_residuals, first_block=False, h=0, w=0):
+    blk = []
+    for i in range(num_residuals):
+        if i == 0 and not first_block:
+            blk.append(Residual(input_channels, num_channels,
+                                use_1x1conv=True, strides=2, h=h, w=w))
+        else:
+            blk.append(Residual(num_channels, num_channels))
+    return blk
 
-lr, num_epochs = 0.01, 10
-net = freqAlexNet(AlexNet)
-d2l.train_ch6(net, train_iter, test_iter, num_epochs, lr, d2l.try_gpu())
+
+'''架构构建'''
+b1 = nn.Sequential(
+    nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3),
+    nn.BatchNorm2d(64), nn.ReLU(),
+    nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+)
+b2 = nn.Sequential(*resnet_block(64, 64, 2, first_block=True))
+b3 = nn.Sequential(*resnet_block(64, 128, 2, h=12, w=7))
+b4 = nn.Sequential(*resnet_block(128, 256, 2, h=6, w=4))
+b5 = nn.Sequential(*resnet_block(256, 512, 2, h=3, w=2))
+
+ResNet18 = nn.Sequential(b1, b2, b3, b4, b5,
+                         nn.AdaptiveAvgPool2d((1, 1)),
+                         nn.Flatten(),
+                         nn.Linear(512, 10))
+
+lr, num_epochs, batch_size = 0.05, 10, 256
+train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size, resize=96)
+
+d2l.train_ch6(ResNet18, train_iter, test_iter, num_epochs, lr, d2l.try_gpu())
 d2l.plt.show()
-# batch_size=128, loss 0.253, train acc 0.907, test acc 0.875
-# x+x_fft.real+x_fft.imag: loss 0.312, train acc 0.885, test acc 0.873
+
+
+# no Residual in Frequency Domain: loss 0.028, train acc 0.991, test acc 0.911
+# with Residual in Frequency Domain: loss 0.014, train acc 0.996, test acc 0.919
+
