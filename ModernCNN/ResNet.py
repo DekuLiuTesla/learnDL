@@ -15,7 +15,7 @@ class Residual(nn.Module):
                                kernel_size=3, padding=1)
         if use_1x1conv:
             self.conv3 = nn.Conv2d(input_channels, num_channels,
-                                   kernel_size=1, stride=strides)
+                                   kernel_size=2, stride=strides)
         else:
             self.conv3 = None
         self.bn1 = nn.BatchNorm2d(num_channels)
@@ -71,7 +71,7 @@ ResNet18 = nn.Sequential(b1, b2, b3, b4, b5,
 model_name = 'ResNet18'
 flops, params = get_model_complexity_info(ResNet18, (1, 224, 224), as_strings=True, print_per_layer_stat=True)
 
-lr, num_epochs, batch_size = 0.05, 20, 256
+lr, num_epochs, batch_size = 0.05, 10, 256
 train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size, resize=96)
 d2l.train_ch6(ResNet18, train_iter, test_iter, num_epochs, lr, d2l.try_gpu())
 d2l.plt.show()

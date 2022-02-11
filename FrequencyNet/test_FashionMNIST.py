@@ -90,10 +90,10 @@ def resnet_block(input_channels, num_channels, num_residuals, first_block=False,
     blk = []
     for i in range(num_residuals):
         if i == 0 and not first_block:
-            blk.append(Residual(input_channels, num_channels,
-                                use_1x1conv=True, strides=2, h=h, w=w))
+            blk.append(Residual_cat(input_channels, num_channels,
+                                    use_1x1conv=True, strides=2, h=h, w=w))
         else:
-            blk.append(Residual(num_channels, num_channels))
+            blk.append(Residual_cat(num_channels, num_channels))
     return blk
 
 
@@ -126,6 +126,6 @@ d2l.plt.show()
 # cat spatial and freq:
 # 10 epochs, batch_size = 256: loss 0.024, train acc 0.993, test acc 0.918
 # 10 epochs, batch_size = 128: loss 0.028, train acc 0.991, test acc 0.921
-# 20 epochs: loss 0.000, train acc 1.000, test acc 0.932
-# cat spatial and freq with 2x2 downsample
-# 10 epochs: loss 0.013, train acc 0.997, test acc 0.924:
+# 20 epochs, batch_size = 128: loss 0.000, train acc 1.000, test acc 0.932
+# cat spatial and freq with 2x2 down-sample
+# 10 epochs, batch_size = 256: loss 0.013, train acc 0.997, test acc 0.924:
