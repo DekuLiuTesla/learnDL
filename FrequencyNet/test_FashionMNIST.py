@@ -110,7 +110,7 @@ b1 = nn.Sequential(
     nn.BatchNorm2d(64), nn.ReLU(),
     nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 )
-b2 = nn.Sequential(*resnet_block(64, 64, 2, first_block=True))
+b2 = nn.Sequential(*resnet_block(64, 64, 2))
 b3 = nn.Sequential(*resnet_block(64, 128, 2, h=12, w=7))
 b4 = nn.Sequential(*resnet_block(128, 256, 2, h=6, w=4))
 b5 = nn.Sequential(*resnet_block(256, 512, 2, h=3, w=2))
