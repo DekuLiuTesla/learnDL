@@ -3,6 +3,7 @@ import os
 import tarfile
 import zipfile
 
+import fnet_modules
 import pandas
 import requests
 import pandas as pd
@@ -15,16 +16,6 @@ from d2l import torch as d2l
 # @save
 DATA_HUB = dict()  # 数据集-下载地址映射二元组
 DATA_URL = 'http://d2l-data.s3-accelerate.amazonaws.com/'
-
-
-class Flock(nn.Module):
-    def __init__(self):
-        super(Flock, self).__init__()
-        self.relu = nn.ReLU()
-
-    def forward(self, x):
-        x_fft = x.fft()
-
 
 
 def download(name, cache_dir=os.path.join('..', 'data')):  # @save
@@ -102,6 +93,7 @@ def get_net():
     num_inputs = training_features.shape[1]
     num_hidden = 1024
     dropout_rate = 0.5
+    # net = fnet_modules.FLock(num_inputs, 1)
     net = nn.Sequential(
         nn.Linear(num_inputs, num_hidden),
         nn.ReLU(),
@@ -138,7 +130,6 @@ def init_weights(m):
 def train(net, train_features, train_labels, test_features, test_labels,
           num_epochs, learning_rate, weight_decay, batch_size):
     train_ls, test_ls = [], []
-
     train_iter = d2l.load_array((train_features, train_labels), batch_size)
     # 使用Adam算法进行优化
     optimizer = torch.optim.Adam(net.parameters(), lr=learning_rate, weight_decay=weight_decay)
@@ -150,9 +141,9 @@ def train(net, train_features, train_labels, test_features, test_labels,
             # l = loss(net(X), torch.log(y))  # 直接预测价格的对数
             l.backward()
             optimizer.step()
-        train_ls.append(log_rmse(net, train_features, train_labels).detach().numpy())
+        train_ls.append(log_rmse(net, train_features, train_labels).detach().cpu().numpy())
         if test_labels is not None:
-            test_ls.append(log_rmse(net, test_features, test_labels).detach().numpy())
+            test_ls.append(log_rmse(net, test_features, test_labels).detach().cpu().numpy())
 
     return train_ls, test_ls
 
@@ -172,9 +163,13 @@ def get_k_fold_data(k, i, X, y):
 
 def k_fold(k, train_features, train_labels, num_epochs,
            learning_rate, weight_decay, batch_size):
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    train_features = train_features.to(device)
+    train_labels = train_labels.to(device)
+
     train_ls_sum, valid_ls_sum = 0, 0
     for i in range(k):
-        net = get_net()
+        net = get_net().to(device)
         # net.apply(init_weights)
         X_train, y_train, X_valid, y_valid = get_k_fold_data(k, i, train_features, train_labels)
         train_ls, valid_ls = train(net, X_train, y_train, X_valid, y_valid,
@@ -264,18 +259,18 @@ train_labels = torch.tensor(training_data.iloc[:, -1], dtype=torch.float32).resh
 """超参数设置"""
 batch_size = 256
 base_lr = 0.1
-weight_decay = 0.0001
+weight_decay = 0.005
 num_epochs = 30
 k = 5
 
 """K折验证"""
-# train_l, valid_l = k_fold(k, training_features, train_labels,
-#                           num_epochs, base_lr, weight_decay, batch_size)
-# print(f"{k}折验证,平均训练log rmse:{float(train_l):f}, 验证log rmse:{float(valid_l):f}")
+train_l, valid_l = k_fold(k, training_features, train_labels,
+                          num_epochs, base_lr, weight_decay, batch_size)
+print(f"{k}折验证,平均训练log rmse:{float(train_l):f}, 验证log rmse:{float(valid_l):f}")
 
 """训练与预测结果保存"""
-train_and_predict(training_features, train_labels, test_features, test_data,
-                      num_epochs, base_lr, weight_decay, batch_size)
+# train_and_predict(training_features, train_labels, test_features, test_data,
+#                   num_epochs, base_lr, weight_decay, batch_size)
 
 """作业题解答"""
 # 1. 提交后得到的分数为rmse = 0.18566
@@ -290,4 +285,3 @@ train_and_predict(training_features, train_labels, test_features, test_data,
 # 6. 那么不同特征的数据尺度会有巨大差异，举个简单的例子，z=ax+by，如果x比y的大几个数量级，那么显然预测结果会被x主导，而可能
 # 同样十分重要的特征y几乎无法影响预测值；此外dz/da=x, dz/db=y，也可以看出a可以有效更新，但b的更新幅度则小的多，反过来又进一步
 # 扩大了x的影响，因此不做标准化会直接导致结果被几个数量级大的特征主导，但这些特征的相关性可能并没有数量级小的特征好，从而劣化预测性能
-
