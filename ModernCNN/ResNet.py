@@ -20,6 +20,8 @@ class Residual(nn.Module):
             self.conv3 = None
         self.bn1 = nn.BatchNorm2d(num_channels)
         self.bn2 = nn.BatchNorm2d(num_channels)
+        self.alpha = nn.Parameter(torch.ones(1))
+        self.beta = nn.Parameter(torch.zeros(1))
 
     def forward(self, X):
         Y = F.relu(self.bn1(self.conv1(X)))
@@ -27,7 +29,7 @@ class Residual(nn.Module):
 
         if self.conv3:
             X = self.conv3(X)
-        Y += X
+        Y += X * self.alpha + self.beta
 
         return F.relu(Y)
 
@@ -71,7 +73,7 @@ ResNet18 = nn.Sequential(b1, b2, b3, b4, b5,
 model_name = 'ResNet18'
 flops, params = get_model_complexity_info(ResNet18, (1, 224, 224), as_strings=True, print_per_layer_stat=True)
 
-lr, num_epochs, batch_size = 0.05, 10, 256
+lr, num_epochs, batch_size = 0.05, 20, 256
 train_iter, test_iter = d2l.load_data_fashion_mnist(batch_size, resize=96)
 d2l.train_ch6(ResNet18, train_iter, test_iter, num_epochs, lr, d2l.try_gpu())
 d2l.plt.show()
