@@ -131,6 +131,7 @@ d2l.plt.show()
 
 # spatial Residual: loss 0.010, train acc 0.998, test acc 0.921
 # 20 epochs: loss 0.000, train acc 1.000, test acc 0.926
+# linear identity(spatial), 20 epochs: loss 0.000, train acc 1.000, test acc 0.929
 # no Residual in Frequency Domain: loss 0.028, train acc 0.991, test acc 0.911
 # with Residual in Frequency Domain: loss 0.014, train acc 0.996, test acc 0.919
 # with more freq filter: 10 epochs, batch_size = 256: loss 0.003, train acc 1.000, test acc 0.917
