@@ -1,8 +1,9 @@
 import torch
 import math
 import torchvision.transforms as transforms
-import torch.functional as F
+from torch.nn import functional as F
 from torch import nn
+from d2l import torch as d2l
 
 
 class AmplitudeMLP(nn.Module):
@@ -106,4 +107,7 @@ class FLock(nn.Module):
             x_fft_imag = x_fft_out[:, x_fft_out.shape[1] // 2:, :, :]
             x_fft = torch.complex(x_fft_real, x_fft_imag)
             return torch.fft.ifft(x_fft)
+
+
+
 
