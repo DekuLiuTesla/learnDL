@@ -91,3 +91,35 @@ class Residual_cat(nn.Module):
             Y += X
 
         return F.relu(Y)
+
+
+class ResFreq_gf(nn.Module):
+    def __init__(self, input_channels, num_channels, use_1x1conv=False, strides=1, h=0, w=0):
+        super(ResFreq_gf, self).__init__()
+        self.conv1 = nn.Conv2d(input_channels, num_channels,
+                               kernel_size=3, padding=1, stride=strides)
+        self.conv2 = nn.Conv2d(num_channels, num_channels,
+                               kernel_size=3, padding=1)
+        if use_1x1conv:
+            self.conv3 = nn.Conv2d(input_channels, num_channels,
+                                   kernel_size=1, stride=strides)
+            if h == 0 and w == 0:
+                self.gfilter = None
+            else:
+                self.gfilter = GlobalFilter(input_channels, h, w)
+        else:
+            self.conv3 = None
+        self.bn1 = nn.BatchNorm2d(num_channels)
+        self.bn2 = nn.BatchNorm2d(num_channels)
+
+    def forward(self, X):
+        Y = F.relu(self.bn1(self.conv1(X)))
+        Y = self.bn2(self.conv2(Y))
+
+        if self.conv3:
+            if self.gfilter:
+                X = self.gfilter(X)
+                X = self.conv3(X)
+        Y += X
+
+        return F.relu(Y)
