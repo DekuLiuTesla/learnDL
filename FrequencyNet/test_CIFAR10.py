@@ -68,28 +68,26 @@ def resnet_block(input_channels, num_channels, num_residuals, first_block=False,
     return blk
 
 
-'''架构构建'''
-b1 = nn.Sequential(
-    nn.Conv2d(3, 64, kernel_size=7, stride=2, padding=3),
-    nn.BatchNorm2d(64), nn.ReLU(),
-    # nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
-)
-b2 = nn.Sequential(*resnet_block(64, 64, 2, h=24, w=13))
-b3 = nn.Sequential(*resnet_block(64, 128, 2, h=12, w=7))
-b4 = nn.Sequential(*resnet_block(128, 256, 2, h=6, w=4))
-b5 = nn.Sequential(*resnet_block(256, 512, 2, h=3, w=2))
-
-
 total_runs = 2
 for run in range(total_runs):
 
+    '''架构构建'''
+    b1 = nn.Sequential(
+        nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
+        nn.BatchNorm2d(64), nn.ReLU(),
+        # nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+    )
+    b2 = nn.Sequential(*resnet_block(64, 64, 2, first_block=True))
+    b3 = nn.Sequential(*resnet_block(64, 128, 2, h=16, w=9))
+    b4 = nn.Sequential(*resnet_block(128, 256, 2, h=8, w=5))
+    b5 = nn.Sequential(*resnet_block(256, 512, 2, h=4, w=3))
     ResNet18 = nn.Sequential(b1, b2, b3, b4, b5,
                              nn.AdaptiveAvgPool2d((1, 1)),
                              nn.Flatten(),
                              nn.Linear(512, 10))
-
+    # net = d2l.resnet18(10, 3)
     ResNet18.to(d2l.try_gpu())
-    summary(ResNet18, input_size=(3, 96, 96))
+    summary(ResNet18, input_size=(3, 32, 32))
 
     with wandb.init(
             # Set the project where this run will be logged
@@ -106,12 +104,12 @@ for run in range(total_runs):
         config = wandb.config
 
         train_aug = torchvision.transforms.Compose([
-            torchvision.transforms.Resize(config.resize),
+            # torchvision.transforms.Resize(config.resize),
             torchvision.transforms.RandomHorizontalFlip(),
             torchvision.transforms.ToTensor()
         ])
         test_aug = torchvision.transforms.Compose([
-            torchvision.transforms.Resize(config.resize),
+            # torchvision.transforms.Resize(config.resize),
             torchvision.transforms.ToTensor()
         ])
 
