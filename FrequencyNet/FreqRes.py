@@ -50,40 +50,6 @@ class Residual_Freq(nn.Module):
         return F.relu(Y)
 
 
-class Residual_Freq_Linear(nn.Module):
-    def __init__(self, input_channels, num_channels, use_1x1conv=False, strides=1, h=0, w=0):
-        super(Residual_Freq_Linear, self).__init__()
-        self.conv1 = nn.Conv2d(input_channels, num_channels,
-                               kernel_size=3, padding=1, stride=strides)
-        self.conv2 = nn.Conv2d(num_channels, num_channels,
-                               kernel_size=3, padding=1)
-        if use_1x1conv:
-            self.conv3 = nn.Conv2d(input_channels, num_channels,
-                                   kernel_size=1, stride=strides)
-            if h == 0 and w == 0:
-                self.gfilter = None
-            else:
-                self.gfilter = GlobalFilter(num_channels, h, w)
-        else:
-            self.conv3 = None
-        self.bn1 = nn.BatchNorm2d(num_channels)
-        self.bn2 = nn.BatchNorm2d(num_channels)
-        self.alpha = nn.Parameter(torch.ones(1))
-        self.beta = nn.Parameter(torch.zeros(1))
-
-    def forward(self, X):
-        Y = F.relu(self.bn1(self.conv1(X)))
-        Y = self.bn2(self.conv2(Y))
-
-        if self.conv3:
-            X = self.conv3(X)
-            if self.gfilter:
-                X = self.gfilter(X)
-        Y += X * self.alpha + self.beta
-
-        return F.relu(Y)
-
-
 class Residual_cat(nn.Module):
     def __init__(self, input_channels, num_channels, use_1x1conv=False, strides=1, h=0, w=0):
         super(Residual_cat, self).__init__()
