@@ -5,7 +5,7 @@ from torch import nn
 from torch.nn import functional as F
 from d2l import torch as d2l
 from torchsummary import summary
-from FreqRes import Residual_Freq, Residual_cat, ResFreq_gf
+from FreqRes import Residual_Freq, ResFreq_gf
 
 
 def load_cifar10(is_train, aug, batch_size):
