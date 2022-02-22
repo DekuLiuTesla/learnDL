@@ -5,7 +5,7 @@ from torch import nn
 from torch.nn import functional as F
 from d2l import torch as d2l
 from torchsummary import summary
-from FreqRes import Residual_Freq, ResFreq_gf
+from FreqRes import Residual_Freq, ResFreq_gf, ResFreq_gf_new
 
 
 def load_cifar10(is_train, aug, batch_size):
@@ -60,11 +60,12 @@ def train_with_data_aug(train_aug, test_aug, net, batch_size, num_epochs, lr=0.0
 def resnet_block(input_channels, num_channels, num_residuals, first_block=False, h=0, w=0):
     blk = []
     for i in range(num_residuals):
-        if i == 0 and not first_block:
-            blk.append(ResFreq_gf(input_channels, num_channels,
-                                  use_1x1conv=True, strides=2, h=h, w=w))
+        if i == 0:
+            stride = 2 if not first_block else 1
+            blk.append(ResFreq_gf_new(input_channels, num_channels,
+                                      use_1x1conv=True, strides=stride, h=h, w=w))
         else:
-            blk.append(ResFreq_gf(num_channels, num_channels))
+            blk.append(ResFreq_gf_new(num_channels, num_channels))
     return blk
 
 

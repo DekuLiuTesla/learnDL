@@ -50,6 +50,7 @@ class Residual_Freq(nn.Module):
         return F.relu(Y)
 
 
+# 用级联的方式融合空域滤波与频域滤波的结果，但性能不佳
 class Residual_cat(nn.Module):
     def __init__(self, input_channels, num_channels, use_1x1conv=False, strides=1, h=0, w=0):
         super(Residual_cat, self).__init__()
@@ -93,6 +94,7 @@ class Residual_cat(nn.Module):
         return F.relu(Y)
 
 
+# 先进行频域滤波再做卷积
 class ResFreq_gf(nn.Module):
     def __init__(self, input_channels, num_channels, use_1x1conv=False, strides=1, h=0, w=0):
         super(ResFreq_gf, self).__init__()
@@ -109,6 +111,7 @@ class ResFreq_gf(nn.Module):
                 self.gfilter = GlobalFilter(input_channels, h, w)
         else:
             self.conv3 = None
+            self.gfilter = None
         self.bn1 = nn.BatchNorm2d(num_channels)
         self.bn2 = nn.BatchNorm2d(num_channels)
 
@@ -116,15 +119,16 @@ class ResFreq_gf(nn.Module):
         Y = F.relu(self.bn1(self.conv1(X)))
         Y = self.bn2(self.conv2(Y))
 
+        if self.gfilter:
+            X = self.gfilter(X)
         if self.conv3:
-            if self.gfilter:
-                X = self.gfilter(X)
-                X = self.conv3(X)
+            X = self.conv3(X)
         Y += X
 
         return F.relu(Y)
 
 
+# 在每一步Residual模块都加入频域滤波结果。性能不佳，舍弃
 class ResFreq_gf_full(nn.Module):
     def __init__(self, input_channels, num_channels, use_1x1conv=False, strides=1, h=0, w=0):
         super(ResFreq_gf_full, self).__init__()
@@ -147,6 +151,39 @@ class ResFreq_gf_full(nn.Module):
     def forward(self, X):
         Y = F.relu(self.bn1(self.conv1(X)))
         Y = self.bn2(self.conv2(Y))
+        if self.gfilter:
+            X = self.gfilter(X)
+        if self.conv3:
+            X = self.conv3(X)
+        Y += X
+
+        return F.relu(Y)
+
+
+# 进一步分离了降采样和频域滤波
+class ResFreq_gf_new(nn.Module):
+    def __init__(self, input_channels, num_channels, use_1x1conv=False, strides=1, h=0, w=0):
+        super(ResFreq_gf_new, self).__init__()
+        self.conv1 = nn.Conv2d(input_channels, num_channels,
+                               kernel_size=3, padding=1, stride=strides)
+        self.conv2 = nn.Conv2d(num_channels, num_channels,
+                               kernel_size=3, padding=1)
+        if use_1x1conv:
+            self.conv3 = nn.Conv2d(input_channels, num_channels,
+                                   kernel_size=1, stride=strides)
+        else:
+            self.conv3 = None
+        if h == 0 and w == 0:
+            self.gfilter = None
+        else:
+            self.gfilter = GlobalFilter(input_channels, h, w)
+        self.bn1 = nn.BatchNorm2d(num_channels)
+        self.bn2 = nn.BatchNorm2d(num_channels)
+
+    def forward(self, X):
+        Y = F.relu(self.bn1(self.conv1(X)))
+        Y = self.bn2(self.conv2(Y))
+
         if self.gfilter:
             X = self.gfilter(X)
         if self.conv3:
