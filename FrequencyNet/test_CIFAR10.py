@@ -62,10 +62,10 @@ def resnet_block(input_channels, num_channels, num_residuals, first_block=False,
     for i in range(num_residuals):
         if i == 0:
             stride = 2 if not first_block else 1
-            blk.append(ResFreq_gf_new(input_channels, num_channels,
-                                      use_1x1conv=True, strides=stride, h=h, w=w))
+            blk.append(ResFreq_gf(input_channels, num_channels,
+                                  use_1x1conv=True, strides=stride, h=h, w=w))
         else:
-            blk.append(ResFreq_gf_new(num_channels, num_channels))
+            blk.append(ResFreq_gf(num_channels, num_channels))
     return blk
 
 

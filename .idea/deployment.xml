@@ -1,29 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
-  <component name="PublishConfigData" serverName="YingCai" remoteFilesAllowedToDisappearOnAutoupload="false">
+  <component name="PublishConfigData" remoteFilesAllowedToDisappearOnAutoupload="false">
     <serverData>
-      <paths name="YingCai">
-        <serverdata>
-          <mappings>
-            <mapping deploy="/Detectron/detectron2" local="$PROJECT_DIR$/../Detectron" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="root@121.48.165.111:30032 password">
+      <paths name="root@121.48.165.111:30031 password">
         <serverdata>
           <mappings>
             <mapping local="$PROJECT_DIR$" web="/" />
           </mappings>
         </serverdata>
       </paths>
-      <paths name="stu10">
-        <serverdata>
-          <mappings>
-            <mapping local="$PROJECT_DIR$" web="/" />
-          </mappings>
-        </serverdata>
-      </paths>
-      <paths name="stu5">
+      <paths name="root@121.48.165.111:30031 password (1)">
         <serverdata>
           <mappings>
             <mapping local="$PROJECT_DIR$" web="/" />

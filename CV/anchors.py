@@ -249,7 +249,7 @@ show_bboxes(fig.axes, boxes[250, 250, :, :] * bbox_scale,
              's=0.75, r=0.5'])
 d2l.plt.show()
 
-# 测试真实边界框的分配
+# 测试真实边界框的分配，主要用于训练阶段
 ground_truth = torch.tensor([[0, 0.1, 0.08, 0.52, 0.92],
                              [1, 0.55, 0.2, 0.9, 0.88]])
 anchors = torch.tensor([[0, 0.1, 0.2, 0.3], [0.15, 0.2, 0.4, 0.4],
@@ -263,7 +263,7 @@ labels = multibox_target(anchors.unsqueeze(dim=0),
                          ground_truth.unsqueeze(dim=0))
 print(labels)
 
-# 测试非极大值抑制
+# 测试非极大值抑制，训练与测试阶段都会用到
 anchors = torch.tensor([[0.1, 0.08, 0.52, 0.92], [0.08, 0.2, 0.56, 0.95],
                         [0.15, 0.3, 0.62, 0.91], [0.55, 0.2, 0.9, 0.88]])
 offset_preds = torch.tensor([0] * anchors.numel())
