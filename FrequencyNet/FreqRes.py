@@ -4,6 +4,14 @@ from torch.nn import functional as F
 from torch import nn
 
 
+'''
+想要让频域滤波拜托固定尺寸的限制，有几种可能的方法：
+1. 固定频域滤波器尺寸，然后降采样到图像大小做滤波: 尺寸不同时性能骤降，行不通
+2. 固定滤波器尺寸，然后在空间域先把长边放缩到一样的大小，再对剩余区域补零，随后转换到频域做滤波
+3. 通过一定的变换从图像直接生成滤波器
+'''
+
+
 class GlobalFilter(nn.Module):
     def __init__(self, dim, h=14, w=8):
         super().__init__()
@@ -13,6 +21,23 @@ class GlobalFilter(nn.Module):
         B, C, H, W = x.shape
         x = torch.fft.rfft2(x, norm='ortho')
         weight = torch.view_as_complex(self.complex_weight)
+        x = x + x * weight
+        x = torch.fft.irfft2(x, s=(H, W), norm='ortho')
+        return x
+
+
+class GlobalFilter_free_size(nn.Module):
+    def __init__(self, dim, h=14, w=8):
+        super().__init__()
+        self.complex_conv = nn.Conv2d(dim*2, 2, kernel_size=3, padding=1)
+        # self.complex_weight = nn.Parameter(torch.randn(dim, h, w, 2, dtype=torch.float32) * 0.02)
+
+    def forward(self, x):
+        B, C, H, W = x.shape
+        x = torch.fft.rfft2(x, norm='ortho')
+        x_in = torch.cat((x.real, x.imag), dim=1)
+        complex_weight = self.complex_conv(x_in)
+        weight = torch.view_as_complex(complex_weight)
         x = x + x * weight
         x = torch.fft.irfft2(x, s=(H, W), norm='ortho')
         return x
@@ -46,50 +71,6 @@ class Residual_Freq(nn.Module):
             if self.gfilter:
                 X = self.gfilter(X)
         Y += X
-
-        return F.relu(Y)
-
-
-# 用级联的方式融合空域滤波与频域滤波的结果，但性能不佳
-class Residual_cat(nn.Module):
-    def __init__(self, input_channels, num_channels, use_1x1conv=False, strides=1, h=0, w=0):
-        super(Residual_cat, self).__init__()
-        if use_1x1conv:
-            space_channels = num_channels // 2
-            freq_channels = num_channels - space_channels
-            self.conv1 = nn.Conv2d(input_channels, space_channels,
-                                   kernel_size=3, padding=1, stride=strides)
-            self.conv2 = nn.Conv2d(space_channels, space_channels,
-                                   kernel_size=3, padding=1)
-            self.conv3 = nn.Conv2d(input_channels, freq_channels,
-                                   kernel_size=2, stride=strides)
-            if h == 0 and w == 0:
-                self.gfilter = None
-            else:
-                self.gfilter = GlobalFilter(freq_channels, h, w)
-            self.bn1 = nn.BatchNorm2d(space_channels)
-            self.bn2 = nn.BatchNorm2d(space_channels)
-        else:
-            self.conv1 = nn.Conv2d(input_channels, num_channels,
-                                   kernel_size=3, padding=1, stride=strides)
-            self.conv2 = nn.Conv2d(num_channels, num_channels,
-                                   kernel_size=3, padding=1)
-            self.conv3 = None
-            self.bn1 = nn.BatchNorm2d(num_channels)
-            self.bn2 = nn.BatchNorm2d(num_channels)
-
-    def forward(self, X):
-        Y = F.relu(self.bn1(self.conv1(X)))
-        Y = self.bn2(self.conv2(Y))
-
-        if self.conv3:
-            X = self.conv3(X)
-            Y += X
-            if self.gfilter:
-                X = self.gfilter(X)
-            Y = torch.cat((Y, X), 1)
-        else:
-            Y += X
 
         return F.relu(Y)
 
@@ -128,42 +109,10 @@ class ResFreq_gf(nn.Module):
         return F.relu(Y)
 
 
-# 在每一步Residual模块都加入频域滤波结果。性能不佳，舍弃
-class ResFreq_gf_full(nn.Module):
-    def __init__(self, input_channels, num_channels, use_1x1conv=False, strides=1, h=0, w=0):
-        super(ResFreq_gf_full, self).__init__()
-        self.conv1 = nn.Conv2d(input_channels, num_channels,
-                               kernel_size=3, padding=1, stride=strides)
-        self.conv2 = nn.Conv2d(num_channels, num_channels,
-                               kernel_size=3, padding=1)
-        if h == 0 and w == 0:
-            self.gfilter = None
-        else:
-            self.gfilter = GlobalFilter(input_channels, h, w)
-        if use_1x1conv:
-            self.conv3 = nn.Conv2d(input_channels, num_channels,
-                                   kernel_size=1, stride=strides)
-        else:
-            self.conv3 = None
-        self.bn1 = nn.BatchNorm2d(num_channels)
-        self.bn2 = nn.BatchNorm2d(num_channels)
-
-    def forward(self, X):
-        Y = F.relu(self.bn1(self.conv1(X)))
-        Y = self.bn2(self.conv2(Y))
-        if self.gfilter:
-            X = self.gfilter(X)
-        if self.conv3:
-            X = self.conv3(X)
-        Y += X
-
-        return F.relu(Y)
-
-
 # 进一步分离了降采样和频域滤波
-class ResFreq_gf_new(nn.Module):
-    def __init__(self, input_channels, num_channels, use_1x1conv=False, strides=1, h=0, w=0):
-        super(ResFreq_gf_new, self).__init__()
+class ResFreq_gf_free(nn.Module):
+    def __init__(self, input_channels, num_channels, use_1x1conv=False, strides=1, h=0, w=0, mode='nearest'):
+        super(ResFreq_gf_free, self).__init__()
         self.conv1 = nn.Conv2d(input_channels, num_channels,
                                kernel_size=3, padding=1, stride=strides)
         self.conv2 = nn.Conv2d(num_channels, num_channels,
@@ -171,12 +120,13 @@ class ResFreq_gf_new(nn.Module):
         if use_1x1conv:
             self.conv3 = nn.Conv2d(input_channels, num_channels,
                                    kernel_size=1, stride=strides)
+            if h == 0 and w == 0:
+                self.gfilter = None
+            else:
+                self.gfilter = GlobalFilter_free_size(input_channels, mode=mode)
         else:
             self.conv3 = None
-        if h == 0 and w == 0:
             self.gfilter = None
-        else:
-            self.gfilter = GlobalFilter(input_channels, h, w)
         self.bn1 = nn.BatchNorm2d(num_channels)
         self.bn2 = nn.BatchNorm2d(num_channels)
 

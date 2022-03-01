@@ -5,7 +5,7 @@ from torch import nn
 from torch.nn import functional as F
 from d2l import torch as d2l
 from torchsummary import summary
-from FreqRes import Residual_Freq, ResFreq_gf, ResFreq_gf_new
+from FreqRes import Residual_Freq, ResFreq_gf, ResFreq_gf_free
 
 
 def load_cifar10(is_train, aug, batch_size):
@@ -61,10 +61,21 @@ def resnet_block(input_channels, num_channels, num_residuals, first_block=False,
     blk = []
     for i in range(num_residuals):
         if i == 0 and not first_block:
-            blk.append(Residual_Freq(input_channels, num_channels,
-                                     use_1x1conv=True, strides=2, h=h, w=w))
+            blk.append(ResFreq_gf(input_channels, num_channels,
+                                  use_1x1conv=True, strides=2, h=h, w=w))
         else:
-            blk.append(Residual_Freq(num_channels, num_channels))
+            blk.append(ResFreq_gf(num_channels, num_channels))
+    return blk
+
+
+def resnet_block_free(input_channels, num_channels, num_residuals, first_block=False, mode='nearest'):
+    blk = []
+    for i in range(num_residuals):
+        if i == 0 and not first_block:
+            blk.append(ResFreq_gf_free(input_channels, num_channels,
+                                       use_1x1conv=True, strides=2, mode=mode))
+        else:
+            blk.append(ResFreq_gf_free(num_channels, num_channels))
     return blk
 
 
@@ -76,10 +87,10 @@ for run in range(total_runs):
         nn.BatchNorm2d(64), nn.ReLU(),
         # nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
     )
-    b2 = nn.Sequential(*resnet_block(64, 64, 2, first_block=True))
-    b3 = nn.Sequential(*resnet_block(64, 128, 2, h=32, w=17))
-    b4 = nn.Sequential(*resnet_block(128, 256, 2, h=16, w=9))
-    b5 = nn.Sequential(*resnet_block(256, 512, 2, h=8, w=5))
+    b2 = nn.Sequential(*resnet_block_free(64, 64, 2, first_block=True))
+    b3 = nn.Sequential(*resnet_block_free(64, 128, 2))
+    b4 = nn.Sequential(*resnet_block_free(128, 256, 2))
+    b5 = nn.Sequential(*resnet_block_free(256, 512, 2))
     ResNet18 = nn.Sequential(b1, b2, b3, b4, b5,
                              nn.AdaptiveAvgPool2d((1, 1)),
                              nn.Flatten(),
@@ -91,6 +102,7 @@ for run in range(total_runs):
     with wandb.init(
             # Set the project where this run will be logged
             project="FreqRes",
+            name='adaptive_Freq_Filter_3x3',
             # Track hyper-parameters and run metadata
             config={
                 "learning_rate": 0.001,
@@ -104,6 +116,7 @@ for run in range(total_runs):
 
         train_aug = torchvision.transforms.Compose([
             # torchvision.transforms.Resize(config.resize),
+            torchvision.transforms.CenterCrop((32, 24)),
             torchvision.transforms.RandomHorizontalFlip(),
             torchvision.transforms.ToTensor()
         ])
