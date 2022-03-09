@@ -102,7 +102,7 @@ for run in range(total_runs):
     with wandb.init(
             # Set the project where this run will be logged
             project="FreqRes",
-            name='adaptive_Freq_Filter_3x3',
+            name='Freq_Attn_5x5',
             # Track hyper-parameters and run metadata
             config={
                 "learning_rate": 0.001,

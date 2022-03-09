@@ -43,6 +43,20 @@ class GlobalFilter_free_size(nn.Module):
         return x
 
 
+class Freq_Attn(nn.Module):
+    def __init__(self, dim, *args):
+        super().__init__()
+        self.complex_conv = nn.Conv2d(dim, dim, kernel_size=5, padding=2)
+        # self.complex_weight = nn.Parameter(torch.randn(dim, h, w, 2, dtype=torch.float32) * 0.02)
+
+    def forward(self, x):
+        B, C, H, W = x.shape
+        x = torch.fft.rfft2(x, norm='ortho')
+        x = self.complex_conv(x)
+        x = torch.fft.irfft2(x, s=(H, W), norm='ortho')
+        return x
+
+
 class Residual_Freq(nn.Module):
     def __init__(self, input_channels, num_channels, use_1x1conv=False, strides=1, h=0, w=0):
         super(Residual_Freq, self).__init__()
@@ -133,11 +147,7 @@ class ResFreq_gf_free(nn.Module):
     def forward(self, X):
         Y = F.relu(self.bn1(self.conv1(X)))
         Y = self.bn2(self.conv2(Y))
-
-        if self.gfilter:
-            X = self.gfilter(X)
-        if self.conv3:
-            X = self.conv3(X)
-        Y += X
+        Y = self.gfilter(Y) if self.gfilter else Y
+        Y += self.conv3(X) if self.conv3 else X
 
         return F.relu(Y)
