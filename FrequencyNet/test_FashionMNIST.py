@@ -110,7 +110,7 @@ b1 = nn.Sequential(
     nn.BatchNorm2d(64), nn.ReLU(),
     nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
 )
-b2 = nn.Sequential(*resnet_block(64, 64, 2))
+b2 = nn.Sequential(*resnet_block(64, 64, 2, first_block=True))
 b3 = nn.Sequential(*resnet_block(64, 128, 2, h=12, w=7))
 b4 = nn.Sequential(*resnet_block(128, 256, 2, h=6, w=4))
 b5 = nn.Sequential(*resnet_block(256, 512, 2, h=3, w=2))
@@ -131,6 +131,7 @@ d2l.plt.show()
 
 # spatial Residual: loss 0.010, train acc 0.998, test acc 0.921
 # 20 epochs: loss 0.000, train acc 1.000, test acc 0.926
+# linear identity(spatial), 20 epochs: loss 0.000, train acc 1.000, test acc 0.929
 # no Residual in Frequency Domain: loss 0.028, train acc 0.991, test acc 0.911
 # with Residual in Frequency Domain: loss 0.014, train acc 0.996, test acc 0.919
 # with more freq filter: 10 epochs, batch_size = 256: loss 0.003, train acc 1.000, test acc 0.917
