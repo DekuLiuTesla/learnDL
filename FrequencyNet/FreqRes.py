@@ -26,20 +26,37 @@ class GlobalFilter(nn.Module):
 
 
 class GlobalFilter_free_size(nn.Module):
-    def __init__(self, dim, h=48, w=24):
+    def __init__(self, dim):
         super().__init__()
-        self.complex_weight = nn.Parameter(torch.randn(dim, h, w, 2, dtype=torch.float32) * 0.02)
+        self.taylor_dim_in = 5
+        # self.taylor_mlp = nn.Conv2d(self.taylor_dim_in, 2 * dim, kernel_size=1, bias=True)
+        self.taylor_mlp = nn.Sequential(
+            nn.Conv2d(self.taylor_dim_in, dim, kernel_size=1, bias=True),
+            nn.InstanceNorm2d(num_features=dim),
+            nn.ReLU(),
+            nn.Conv2d(dim, dim * 2, kernel_size=1, bias=True),
+            nn.InstanceNorm2d(num_features=dim)
+        )
 
-    def forward(self, x):
-        B, C, H, W = x.shape
-        x = torch.fft.rfft2(x, norm='ortho')
-        weight = torch.cat([self.complex_weight[:, :H // 2, :, :],
-                            self.complex_weight[:, -H // 2:, :, :]], dim=1)
-        weight = weight[:, :, :W//2+1, :]
-        weight = torch.view_as_complex(weight)
-        x = x + x * weight
-        x = torch.fft.irfft2(x, s=(H, W), norm='ortho')
-        return x
+    def forward(self, input):
+        B, C, H, W = input.shape
+
+        # 生成频域滤波器
+        xx = torch.arange(0, H, dtype=torch.float32, device=input.device)
+        yy = torch.arange(0, W // 2 + 1, dtype=torch.float32, device=input.device)
+        grid_x, grid_y = torch.meshgrid(xx, yy)
+        grid = torch.stack((grid_x, grid_y, grid_x * grid_x, grid_y * grid_y,
+                            grid_y * grid_x), dim=-1)
+        grid_dim = grid.reshape(H, W // 2 + 1, self.taylor_dim_in).permute(2, 0, 1).unsqueeze(0)
+        complex_weight_dim = self.taylor_mlp(grid_dim).squeeze(0).permute(1, 2, 0)
+        complex_weight = complex_weight_dim.reshape(H, W // 2 + 1, 2, C).permute(3, 0, 1, 2).contiguous() * 0.02
+
+        # 频域滤波
+        input_fft = torch.fft.rfft2(input, norm='ortho')
+        weight = torch.view_as_complex(complex_weight)
+        output_fft = input_fft + input_fft * weight
+        output = torch.fft.irfft2(output_fft, s=(H, W), norm='ortho')
+        return output
 
 
 class Freq_Attn(nn.Module):
