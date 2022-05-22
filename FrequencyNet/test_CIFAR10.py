@@ -49,11 +49,12 @@ def train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs,
           f'{str(devices)}')
 
 
-def train_with_data_aug(train_aug, test_aug, net, batch_size, num_epochs, lr=0.001, devices=d2l.try_all_gpus()):
+def train_with_data_aug(train_aug, test_aug, net, batch_size, num_epochs, lr=0.001,
+                        weight_decay=1e-5, devices=d2l.try_all_gpus()):
     train_iter = load_cifar10(True, train_aug, batch_size)
     test_iter = load_cifar10(False, test_aug, batch_size)
     loss = nn.CrossEntropyLoss(reduction='none')
-    trainer = torch.optim.Adam(net.parameters(), lr=lr)
+    trainer = torch.optim.Adam(net.parameters(), lr=lr, weight_decay=weight_decay)
     train_ch13(net, train_iter, test_iter, loss, trainer, num_epochs, devices)
 
 
@@ -68,18 +69,18 @@ def resnet_block(input_channels, num_channels, num_residuals, first_block=False,
     return blk
 
 
-def resnet_block_free(input_channels, num_channels, num_residuals, first_block=False, mode='nearest'):
+def resnet_block_free(input_channels, num_channels, num_residuals, first_block=False, h=0, w=0):
     blk = []
     for i in range(num_residuals):
         if i == 0 and not first_block:
             blk.append(ResFreq_gf_free(input_channels, num_channels,
-                                       use_1x1conv=True, strides=2, mode=mode))
+                                       use_1x1conv=True, strides=2))
         else:
             blk.append(ResFreq_gf_free(num_channels, num_channels))
     return blk
 
 
-total_runs = 2
+total_runs = 1
 for run in range(total_runs):
     '''架构构建'''
     b1 = nn.Sequential(
@@ -88,24 +89,25 @@ for run in range(total_runs):
         # nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
     )
     b2 = nn.Sequential(*resnet_block_free(64, 64, 2, first_block=True))
-    b3 = nn.Sequential(*resnet_block_free(64, 128, 2))
-    b4 = nn.Sequential(*resnet_block_free(128, 256, 2))
-    b5 = nn.Sequential(*resnet_block_free(256, 512, 2))
+    b3 = nn.Sequential(*resnet_block_free(64, 128, 2, h=32, w=17))
+    b4 = nn.Sequential(*resnet_block_free(128, 256, 2, h=16, w=9))
+    b5 = nn.Sequential(*resnet_block_free(256, 512, 2, h=8, w=5))
     ResNet18 = nn.Sequential(b1, b2, b3, b4, b5,
                              nn.AdaptiveAvgPool2d((1, 1)),
                              nn.Flatten(),
                              nn.Linear(512, 10))
-    # net = d2l.resnet18(10, 3)
+    net = d2l.resnet18(10, 3)
     ResNet18.to(d2l.try_gpu())
     summary(ResNet18, input_size=(3, 32, 32))
 
     with wandb.init(
             # Set the project where this run will be logged
             project="FreqRes",
-            name='Freq_Attn_part',
+            name='taylor-2nd-2conv-IN',
             # Track hyper-parameters and run metadata
             config={
                 "learning_rate": 0.001,
+                "weight_decay": 1e-3,
                 "batch_size": 256,
                 "num_epochs": 10,
                 "resize": 96,
@@ -116,7 +118,7 @@ for run in range(total_runs):
 
         train_aug = torchvision.transforms.Compose([
             # torchvision.transforms.Resize(config.resize),
-            torchvision.transforms.CenterCrop((32, 24)),
+            # torchvision.transforms.CenterCrop((32, 24)),
             torchvision.transforms.RandomHorizontalFlip(),
             torchvision.transforms.ToTensor()
         ])
@@ -129,7 +131,8 @@ for run in range(total_runs):
         test_iter = load_cifar10(False, test_aug, config.batch_size)
 
         wandb.watch(ResNet18)
-        train_with_data_aug(train_aug, test_aug, ResNet18, config.batch_size, config.num_epochs, config.learning_rate)
+        train_with_data_aug(train_aug, test_aug, ResNet18, config.batch_size, config.num_epochs,
+                            config.learning_rate, config.weight_decay)
         d2l.plt.show()
         wandb.finish()
 
