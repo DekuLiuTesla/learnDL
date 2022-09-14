@@ -7,8 +7,7 @@ from bs4 import BeautifulSoup
 from progressbar import *
 
 
-def geturl():
-    url = 'https://www.xuanshu.com/book/23011/'  # target website
+def geturl(url):
     headers = {'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
                              " ""Chrome/78.0.3904.70 Safari/537.36", }  # including infos about agent browser
     req = requests.get(url=url, headers=headers)
@@ -52,11 +51,18 @@ def get_txt(url, caption, headers, save_pth, **kwargs):
 
 
 if __name__ == '__main__':
-    targets = geturl()
+    # j = 0
+    # renamed_dir = "./texts/DouLuoDaLu2_renamed/"
+    save_dir = "./texts/DouLuoDaLu2/"
+    target_url = 'https://www.xuanshu.com/book/23099/'  # target website
+    targets = geturl(target_url)
     headers = {'user-agent': "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:34.0) "
                              "Gecko/20100101 Firefox/34.0"}  # including infos about agent browser
-    save_dir = "./texts/DouLuoDaLu/"
     pbar = ProgressBar().start()
     for i, tar in enumerate(targets):
+        file_name = tar[1].replace(" ", '_') + ".txt"
         get_txt(tar[0], tar[1], headers, save_dir, id="content1")
+        # if os.path.exists(save_dir + file_name):
+        #     os.rename(save_dir + file_name, save_dir + renamed_dir + f'chapter_{j}' + ".txt")
+        #     j += 1
         pbar.update(int(((i + 1) / len(targets)) * 100))
