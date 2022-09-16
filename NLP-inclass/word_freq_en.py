@@ -14,7 +14,7 @@ if __name__ == '__main__':
     sample_ratio = 1
     word_count = {}
 
-    novel_name = 'DouLuoDaLu2'
+    novel_name = 'SteveJobs'
     load_dir = 'texts/'+novel_name
     txt_pathnames = sorted(
         glob(join(load_dir, '*.txt')))
@@ -27,7 +27,9 @@ if __name__ == '__main__':
         with open(txt_path, 'r') as f:
             text = f.read().replace('\n', '')
             for u_char in text:
-                if u'\u4e00' <= u_char <= u'\u9fa5':
+                if u_char.isspace() or u_char.isalpha():
+                    if u_char.islower():
+                        u_char = u_char.upper()
                     if u_char in word_count.keys():
                         word_count[u_char] += 1
                     else:
@@ -50,7 +52,7 @@ if __name__ == '__main__':
         print(f"Select {len(selected_txt_pathnames)}/{len(txt_pathnames)} txt files")
         print(f"Number of Characters: {cnt/10**6:.3f} M")
         print(f"Size of txt files: {file_size_M:.3f} M")
-        num = 30
+        num = 27
         print(f"Most frequent {num} characters: ")
         for i in range(num):
             print(sorted_word_count[i][0], end=' ')

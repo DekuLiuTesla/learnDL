@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup
 from progressbar import *
 
 
-def geturl(url):
+def get_url(url):
     headers = {'user-agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
                              " ""Chrome/78.0.3904.70 Safari/537.36", }  # including infos about agent browser
     req = requests.get(url=url, headers=headers)
@@ -21,7 +21,7 @@ def geturl(url):
     for chapter in chapters:
         name = chapter.string
         href = chapter.get("href")
-        url_chapter = href if url in href else url + href
+        url_chapter = url + href
         website = [url_chapter, name]  # stored in a list
         websites.append(website)
     return websites
@@ -51,18 +51,13 @@ def get_txt(url, caption, headers, save_pth, **kwargs):
 
 
 if __name__ == '__main__':
-    # j = 0
-    # renamed_dir = "./texts/DouLuoDaLu2_renamed/"
     save_dir = "./texts/DouLuoDaLu2/"
     target_url = 'https://www.xuanshu.com/book/23099/'  # target website
-    targets = geturl(target_url)
+    targets = get_url(target_url)
     headers = {'user-agent': "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:34.0) "
                              "Gecko/20100101 Firefox/34.0"}  # including infos about agent browser
     pbar = ProgressBar().start()
     for i, tar in enumerate(targets):
-        file_name = tar[1].replace(" ", '_') + ".txt"
-        get_txt(tar[0], tar[1], headers, save_dir, id="content1")
-        # if os.path.exists(save_dir + file_name):
-        #     os.rename(save_dir + file_name, save_dir + renamed_dir + f'chapter_{j}' + ".txt")
-        #     j += 1
+        file_name = f'chapter_{i}' + ".txt"
+        get_txt(tar[0], file_name, headers, save_dir, id="content1")
         pbar.update(int(((i + 1) / len(targets)) * 100))
