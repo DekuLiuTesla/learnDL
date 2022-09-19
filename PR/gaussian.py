@@ -16,6 +16,9 @@ p1 = st.multivariate_normal.pdf(positions, mean=mean_1, cov=var)
 p2 = st.multivariate_normal.pdf(positions, mean=mean_2, cov=var)
 plt.contourf(x, y, p1*P[0]+p2*P[1], 20)
 plt.colorbar()
+plt.title('pdf of multivariate normal distribution')
+plt.xlabel('x')
+plt.ylabel('y')
 plt.show()
 
 err_rate_list = []
@@ -33,6 +36,9 @@ for num in range(100, 1100, 100):
 
 plt.scatter(x1[:, 0], x1[:, 1], c='r')
 plt.scatter(x2[:, 0], x2[:, 1], c='g')
+plt.title('samples distribution')
+plt.xlabel('x')
+plt.ylabel('y')
 plt.show()
 
 x = np.arange(100, 1100, 100)
