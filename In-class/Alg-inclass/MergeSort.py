@@ -2,7 +2,7 @@ import numpy as np
 import time
 
 
-def MergeSortL(low, high, seq):
+def mergeSort(low, high, seq):
     """MergeSort for a sequence.
 
         Args:
@@ -22,12 +22,12 @@ def MergeSortL(low, high, seq):
             seq[high] = temp
     else:
         mid = (low + high) // 2
-        MergeSortL(low, mid, seq)
-        MergeSortL(mid+1, high, seq)
-        Merge(low, mid, high, seq)
+        mergeSort(low, mid, seq)
+        mergeSort(mid+1, high, seq)
+        merge(low, mid, high, seq)
 
 
-def Merge(low, mid, high, seq):
+def merge(low, mid, high, seq):
     """Merge ordered sequences.
 
             Args:
@@ -38,7 +38,7 @@ def Merge(low, mid, high, seq):
 
             Return:
                 None.
-        """
+    """
     low_index, high_index = low, mid + 1
     temp_seq = []
     while (low_index <= mid) & (high_index <= high):
@@ -65,7 +65,7 @@ if __name__ == '__main__':
     for length_seq in length_seq_list:
         test_seq = np.random.choice(length_seq, length_seq, replace=False)
         time_start = time.time()
-        MergeSortL(0, length_seq-1, test_seq)
+        mergeSort(0, length_seq-1, test_seq)
         time_end = time.time()
         print(f'time cost when length_seq = {length_seq}: {time_end - time_start:4f} s')
 
