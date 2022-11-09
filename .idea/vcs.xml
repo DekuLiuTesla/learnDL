@@ -2,5 +2,6 @@
 <project version="4">
   <component name="VcsDirectoryMappings">
     <mapping directory="$PROJECT_DIR$" vcs="Git" />
+    <mapping directory="$PROJECT_DIR$/In-class/NLP/homework2/NEURAL_LANGUAGE_MODEL" vcs="Git" />
   </component>
 </project>
